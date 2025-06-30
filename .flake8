@@ -1,0 +1,4 @@
+[flake8]
+exclude = .git,__pycache__,docs,old,build,dist,.env/*
+# some commands stretch wide, no need to compromise on readability
+max-line-length = 160

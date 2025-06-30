@@ -1,6 +1,6 @@
 import logging
-import re
 from comfy.automate import job
+
 
 @job(platform='cisco*')
 def ensure_acl_bound(device, interface: str, acl_name: str, direction: str = "in"):
