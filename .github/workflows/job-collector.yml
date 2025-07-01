@@ -11,4 +11,4 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Run job collector
-        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 collect-jobs --co -p comfy.automate -p asyncio --rootdir $PWD/jobs $PWD/jobs
+        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 collect-jobs --co -p comfy.automate --rootdir $PWD/jobs $PWD/jobs
