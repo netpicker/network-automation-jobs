@@ -10,5 +10,5 @@ jobs:
       options: --cpus 1
     steps:
       - uses: actions/checkout@v3
-      - name: Run job collector
+      - name: Run job test runner
 	run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest --jobs-dir=/jobs -s -p runner.yaml_jobs -p pytest_asyncio -o asyncio_default_fixture_loop_scope=session -p no:pytest_cov --rootdir $PWD/tests $PWD/test
