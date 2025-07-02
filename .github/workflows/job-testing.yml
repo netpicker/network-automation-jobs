@@ -3,7 +3,7 @@ on:
   push:
 
 jobs:
-  container-test-jobs:
+  job-test-runner:
     runs-on: ubuntu-latest
     container:
       image: netpicker/crt
@@ -11,4 +11,4 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: "Run job test runner"
-        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest --jobs-dir=/jobs -s -p runner.yaml_jobs -p pytest_asyncio -o asyncio_default_fixture_loop_scope=session --rootdir $PWD/tests $PWD/test
+        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest --jobs-dir=/jobs -s -p runner.yaml_jobs -p pytest_asyncio -o asyncio_default_fixture_loop_scope=session --rootdir $PWD/tests $PWD/tests

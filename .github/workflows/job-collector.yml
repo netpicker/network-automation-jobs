@@ -3,7 +3,7 @@ on:
   push:
 
 jobs:
-  container-test-job:
+  job-collector:
     runs-on: ubuntu-latest
     container:
       image: netpicker/crt
