@@ -1,10 +1,10 @@
-import logging
 from comfy.automate import job
 
 
 @job(platform='cisco*')
 def configure_snmpv3(
     device,
+    logger,
     username: str,
     auth_password: str,
     priv_password: str,
@@ -18,6 +18,7 @@ def configure_snmpv3(
 
     Args:
         device: The Netpicker device object.
+        logger: The logging.Logger object.
         username (str): SNMPv3 username.
         auth_password (str): Authentication password.
         priv_password (str): Privacy password.
@@ -27,23 +28,25 @@ def configure_snmpv3(
         group (str): SNMP group name.
     """
     log_prefix = f"Device {device.ipaddress}:"
-    logging.info(f"{log_prefix} Starting SNMPv3 configuration job...")
+    logger.info(f"{log_prefix} Starting SNMPv3 configuration job...")
+
+    if device.platform == "cisco_nxos":
+        commit = "copy running-config startup-config"
+    else:
+        commit = "write memory"
 
     config_commands = [
         f"snmp-server group {group} v3 priv read {view}",
-        f"snmp-server user {username} {group} v3 auth {auth_protocol} {auth_password} priv {priv_protocol} {priv_password}"
+        f"snmp-server user {username} {group} v3 auth {auth_protocol} {auth_password} priv {priv_protocol} {priv_password}",
+        commit,
     ]
-
-    if device.platform == "cisco_nxos":
-        config_commands.append("copy running-config startup-config")
-    else:
-        config_commands.append("write memory")
 
     try:
         result = device.cli.send_config_set(config_commands)
-        logging.info(f"{log_prefix} SNMPv3 configured successfully.")
-        logging.debug(f"{log_prefix} Output: {result}")
-        return result
     except Exception as e:
-        logging.error(f"{log_prefix} Error configuring SNMPv3: {e}")
+        logger.error(f"{log_prefix} Error configuring SNMPv3: {e}")
         raise
+
+    logger.info(f"{log_prefix} SNMPv3 configured successfully.")
+    logger.debug(f"{log_prefix} Output: {result}")
+    return result

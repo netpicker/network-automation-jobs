@@ -1,0 +1,32 @@
+x-common-cli: &common-cli
+  show running-config interface iface: ok
+  interface iface: ok
+  ip access-group acl1 in: ok
+
+
+tests:
+  - name: Happy flow
+    device:
+      platform: cisco_ios
+    outcome: OK
+    variables:
+      interface: iface
+      acl_name: acl1
+    cli:
+      <<: *common-cli
+      write memory:  ok
+      copy running-config startup-config:
+          type: 'netmiko.exceptions.NetmikoBaseException'
+
+  - name: Invalid platform command
+    device:
+      platform: cisco_nxos
+    outcome: TESTS_FAILED
+    variables:
+      interface: iface
+      acl_name: acl1
+    cli:
+      <<: *common-cli
+      copy running-config startup-config: ok
+      write memory:
+          type: 'netmiko.exceptions.NetmikoBaseException'
