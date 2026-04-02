@@ -1,6 +1,7 @@
 from comfy.automate import job
 
-@job(platform=["cisco_ios","cisco_xe","arista_eos"])
+
+@job(platform=["cisco_ios", "cisco_xe","arista_eos"])
 def run_multiple_show_commands(device, cmds: str):
     """
     Executes multiple show commands on the device.

@@ -15,6 +15,7 @@ from comfy.automate import job
 #   vlan_id    (int)  : VLAN ID to delete          e.g. 100
 # =============================================================================
 
+
 @job(platform=['cisco_ios', 'cisco_xe'])
 def delete_vlan(device, vlan_id):
 
@@ -22,7 +23,7 @@ def delete_vlan(device, vlan_id):
 
     # INPUT VALIDATION
     if not vlan_id:
-        print(f"[ERROR] vlan_id is required. Please provide a VLAN ID.")
+        print("[ERROR] vlan_id is required. Please provide a VLAN ID.")
         raise ValueError("vlan_id cannot be empty.")
 
     if not vlan_id.isdigit() or not (1 <= int(vlan_id) <= 4094):
@@ -62,7 +63,7 @@ def delete_vlan(device, vlan_id):
     else:
         print(f"[PRE-CHECK] No access ports assigned to VLAN {vlan_id}.")
 
-    print(f"[PRE-CHECK] Proceeding with deletion...")
+    print("[PRE-CHECK] Proceeding with deletion...")
 
     # EXECUTION
     try:

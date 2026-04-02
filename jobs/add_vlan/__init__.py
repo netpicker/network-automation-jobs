@@ -12,21 +12,25 @@ from comfy.automate import job
 # Variables:
 #   vlan_id    (int)  : VLAN ID to create          e.g. 100
 #   vlan_name  (str)  : Name/description for VLAN  e.g. "USERS_VLAN"
+#
+# Rollback:
+#   To undo a successful run, use the delete_vlan job.
 # =============================================================================
+
 
 @job(platform=['cisco_ios', 'cisco_xe'])
 def create_vlan(device, vlan_id, vlan_name):
 
-    vlan_id   = str(vlan_id).strip()
+    vlan_id = str(vlan_id).strip()
     vlan_name = str(vlan_name).strip()
 
     # INPUT VALIDATION
     if not vlan_id:
-        print(f"[ERROR] vlan_id is required. Please provide a VLAN ID.")
+        print("[ERROR] vlan_id is required. Please provide a VLAN ID.")
         raise ValueError("vlan_id cannot be empty.")
 
     if not vlan_name:
-        print(f"[ERROR] vlan_name is required. Please provide a VLAN name.")
+        print("[ERROR] vlan_name is required. Please provide a VLAN name.")
         raise ValueError("vlan_name cannot be empty.")
 
     if not vlan_id.isdigit() or not (1 <= int(vlan_id) <= 4094):
@@ -47,7 +51,7 @@ def create_vlan(device, vlan_id, vlan_name):
         device.cli.send_config_set([
             f"vlan {vlan_id}",
             f"name {vlan_name}",
-            f"exit"
+            "exit"
         ])
         print(f"[EXEC] Configuration sent to {device.name}.")
 
@@ -61,5 +65,5 @@ def create_vlan(device, vlan_id, vlan_name):
     if "active" in verification.lower() or "suspended" in verification.lower():
         print(f"[SUCCESS] VLAN {vlan_id} ('{vlan_name}') created successfully on {device.name}.")
     else:
-        print(f"[FAILED] VLAN {vlan_id} not found after configuration. Check device manually.")
+        print("[FAILED] VLAN not found after configuration. Check device manually.")
         raise RuntimeError(f"VLAN {vlan_id} creation could not be verified on {device.name}.")
