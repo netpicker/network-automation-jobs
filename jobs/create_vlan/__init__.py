@@ -63,7 +63,7 @@ def create_vlan(device, vlan_id, vlan_name):
     verification = device.cli(f"show vlan id {vlan_id}")
 
     if "active" in verification.lower() or "suspended" in verification.lower():
-        print(f"[SUCCESS] VLAN {vlan_id} ('{vlan_name}') created successfully on {device.name}.")
+        print(f"[SUCCESS] VLAN {vlan_id} (\'{vlan_name}\') created successfully on {device.name}.")
     else:
         print("[FAILED] VLAN not found after configuration. Check device manually.")
         raise RuntimeError(f"VLAN {vlan_id} creation could not be verified on {device.name}.")
