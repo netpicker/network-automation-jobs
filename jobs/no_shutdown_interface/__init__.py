@@ -57,4 +57,3 @@ def no_shutdown_interface(device, interface_name):
     else:
         print("[FAILED] Interface still down after configuration. Check device manually.")
         raise RuntimeError(f"Interface {interface_name} enabling could not be verified on {device.name}.")
-        

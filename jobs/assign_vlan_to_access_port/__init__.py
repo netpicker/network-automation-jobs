@@ -72,4 +72,3 @@ def assign_vlan_to_access_port(device, interface, vlan_id):
     else:
         print("[FAILED] VLAN assignment not found after configuration. Check device manually.")
         raise RuntimeError(f"VLAN {vlan_id} assignment could not be verified on {device.name}.")
-        

@@ -63,4 +63,3 @@ def set_interface_description(device, interface_name, description):
     else:
         print("[FAILED] Description not found after configuration. Check device manually.")
         raise RuntimeError(f"Setting description for interface {interface_name} could not be verified on {device.name}.")
-        

@@ -63,4 +63,3 @@ def add_vlan_to_trunk(device, interface, vlan_id):
     else:
         print("[FAILED] VLAN not found in trunk configuration after addition. Check device manually.")
         raise RuntimeError(f"VLAN {vlan_id} addition could not be verified on {device.name}.")
-        
