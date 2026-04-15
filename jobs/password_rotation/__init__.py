@@ -1,9 +1,8 @@
 import requests
-import json
 from comfy.automate import job
 
 
-@job(platform=['cisco_ios','cisco_xe','cisco_nxos','arista_eos',"cisco_wlc"])
+@job(platform=['cisco_ios', 'cisco_xe', 'cisco_nxos', 'arista_eos', "cisco_wlc"])
 def rotate_password(device, local_user: str, local_passwd: str):
     webhook_url = ""
 
@@ -25,7 +24,7 @@ def rotate_password(device, local_user: str, local_passwd: str):
         elif device.platform in ["cisco_xe", "cisco_ios"]:
             device.cli.send_config_set([
                 f"username {local_user} privilege 15 secret {local_passwd}",
-                f"no enable secret"
+                "no enable secret"
             ])
             device.cli("write mem")
 
@@ -64,4 +63,3 @@ def rotate_password(device, local_user: str, local_passwd: str):
 
         # Always re-raise so Netpicker tracks the failure in the UI
         raise e
-
