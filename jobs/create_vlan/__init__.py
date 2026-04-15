@@ -67,3 +67,4 @@ def create_vlan(device, vlan_id, vlan_name):
     else:
         print("[FAILED] VLAN not found after configuration. Check device manually.")
         raise RuntimeError(f"VLAN {vlan_id} creation could not be verified on {device.name}.")
+        

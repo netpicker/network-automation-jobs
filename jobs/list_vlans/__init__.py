@@ -21,3 +21,4 @@ def list_vlans(device):
     except Exception as e:
         print(f"[ERROR] Failed to retrieve VLANs from {device.name}: {e}")
         raise
+        

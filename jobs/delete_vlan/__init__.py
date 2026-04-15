@@ -60,3 +60,4 @@ def delete_vlan(device, vlan_id):
     else:
         print("[FAILED] VLAN still present after deletion. Check device manually.")
         raise RuntimeError(f"VLAN {vlan_id} deletion could not be verified on {device.name}.")
+        
