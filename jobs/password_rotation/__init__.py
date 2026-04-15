@@ -1,30 +1,67 @@
-import logging
+import requests
+import json
 from comfy.automate import job
 
 
-@job(platform='cisco*')
-def rotate_password_cisco(device, username: str, new_password: str):
-    """
-    Rotates the password for a specified user on a Cisco IOS / NX-OS device.
-
-    Args:
-        device: The Netpicker device object.
-        username (str): The username whose password needs to be rotated.
-        new_password (str): The new secret password to set.
-    """
-    log_prefix = f"Device {device.ipaddress}, User '{username}':"
-    logging.info(f"{log_prefix} Starting password rotation job.")
-
-    config_commands = [
-        f"username {username} secret {new_password}",
-        "write memory"  # Or use "copy running-config startup-config"
-    ]
+@job(platform=['cisco_ios','cisco_xe','cisco_nxos','arista_eos',"cisco_wlc"])
+def rotate_password(device, local_user: str, local_passwd: str):
+    webhook_url = ""
 
     try:
-        result = device.cli.send_config_set(config_commands)
-        logging.info(f"{log_prefix} Password rotation successful.")
-        logging.debug(f"{log_prefix} Output: {result}")
-        return result
+        # 1. Direct Validation (No extra functions)
+        if not local_user or not str(local_user).strip():
+            raise RuntimeError("Missing required input: local_user")
+        if not local_passwd or not str(local_passwd).strip():
+            raise RuntimeError("Missing required input: local_passwd")
+
+        # 2. Execution Logic based on Platform
+        if device.platform == "cisco_nxos":
+            device.cli.send_config_set([
+                f"username {local_user} password {local_passwd} role network-admin",
+                f"username {local_user} role priv-15",
+            ])
+            device.cli("copy running-config startup-config")
+
+        elif device.platform in ["cisco_xe", "cisco_ios"]:
+            device.cli.send_config_set([
+                f"username {local_user} privilege 15 secret {local_passwd}",
+                f"no enable secret"
+            ])
+            device.cli("write mem")
+
+        elif device.platform == "arista_eos":
+            device.cli.send_config_set([
+                f"username {local_user} privilege 15 role network-admin secret {local_passwd}"
+            ])
+            device.cli("copy running-config startup-config")
+
+        elif device.platform == "cisco_wlc":
+            device.cli(f"config mgmtuser password {local_user} {local_passwd}")
+            device.cli("save config", expect_string="y/n")
+            device.cli("y", "aved!")
+
+        else:
+            raise RuntimeError(f"Unsupported vendor: {device.platform} on {device.name}")
+
+        # 3. Success Notification
+        requests.post(webhook_url, json={
+            "attachments": [{
+                "color": "#2EB67D",
+                "title": "✅ Password Rotation Successful",
+                "text": f"Device: *{device.name}*\nUser: *{local_user}*"
+            }]
+        }, timeout=10)
+
     except Exception as e:
-        logging.error(f"{log_prefix} Error during password rotation: {e}")
-        raise
+        # 4. Failure Notification
+        requests.post(webhook_url, json={
+            "attachments": [{
+                "color": "#E01E5A",
+                "title": "❌ Password Rotation Failed",
+                "text": f"Device: *{device.name}*\nError: `{str(e)}`"
+            }]
+        }, timeout=10)
+
+        # Always re-raise so Netpicker tracks the failure in the UI
+        raise e
+
