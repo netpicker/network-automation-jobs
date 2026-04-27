@@ -39,9 +39,7 @@ The `password_rotation` job supports multiple platforms and branches its command
 
 ## Creating an Automation Job
 
-Each job is a regular Python function. The first argument is always the Netpicker `device` object. Additional function arguments become parameters that can be supplied when the job is run.
-
-Here is a minimal job that sets an interface description:
+Here is a minimal example:
 
 ```python
 from comfy.automate import job
@@ -50,11 +48,11 @@ from comfy.automate import job
 @job(platform=['cisco_ios', 'cisco_xe'])
 def set_interface_description(device, interface_name, description):
     device.cli.send_config_set([f"interface {interface_name}", f"description {description}"])
-    device.cli.send_command("write memory")
+    device.cli("write memory")
     print(f"Description set on {interface_name}")
 ```
 
-For jobs that change production network state, add input validation, pre-checks, and post-checks:
+A more complete example with input validation, pre-checks, and post-checks:
 
 ```python
 from comfy.automate import job
@@ -62,48 +60,36 @@ from comfy.automate import job
 
 @job(platform=['cisco_ios', 'cisco_xe'])
 def create_vlan(device, vlan_id, vlan_name):
+    """Create a VLAN and verify it exists. Rollback: delete_vlan."""
     vlan_id = str(vlan_id).strip()
     vlan_name = str(vlan_name).strip()
 
-    if not vlan_id:
-        raise ValueError("vlan_id cannot be empty.")
+    if not vlan_name:
+        raise ValueError("vlan_name cannot be empty.")
 
     if not vlan_id.isdigit() or not (1 <= int(vlan_id) <= 4094):
-        raise ValueError(f"Invalid vlan_id: {vlan_id}")
+        raise ValueError("vlan_id must be a number between 1 and 4094.")
 
     existing = device.cli(f"show vlan id {vlan_id}")
-
     if "active" in existing.lower() or "suspended" in existing.lower():
         print(f"[SKIP] VLAN {vlan_id} already exists on {device.name}. No changes made.")
         return
+
+    print(f"[PRE-CHECK] VLAN {vlan_id} does not exist. Proceeding...")
 
     device.cli.send_config_set([
         f"vlan {vlan_id}",
         f"name {vlan_name}",
     ])
-    device.cli.send_command("write memory")
+    device.cli("write memory")
+    print(f"[EXEC] Configuration saved on {device.name}.")
 
     verification = device.cli(f"show vlan id {vlan_id}")
-
     if "active" not in verification.lower() and "suspended" not in verification.lower():
         raise RuntimeError(f"VLAN {vlan_id} creation could not be verified on {device.name}.")
 
     print(f"[SUCCESS] VLAN {vlan_id} ('{vlan_name}') created successfully on {device.name}.")
 ```
-
-## Common Job Pattern
-
-The configuration examples follow a consistent structure:
-
-1. Normalize and validate inputs.
-2. Run a pre-check with a show command.
-3. Skip safely if the desired state already exists or prerequisites are missing.
-4. Apply configuration with `device.cli.send_config_set([...])`.
-5. Save the configuration with `device.cli.send_command("write memory")`.
-6. Run a post-check to verify the intended state.
-7. Raise an exception when validation or verification fails so Netpicker records the job as failed.
-
-This pattern keeps jobs predictable and makes repeated runs safer.
 
 ## The `@job` Decorator
 
@@ -124,11 +110,11 @@ Netpicker exposes CLI access through `device.cli`.
 
 ### Show Commands
 
-The examples use both forms below for operational commands:
+Use `device.cli("...")` for operational commands:
 
 ```python
 output = device.cli("show vlan brief")
-output = device.cli.send_command("show running-config interface GigabitEthernet0/1")
+output = device.cli("show running-config interface GigabitEthernet0/1")
 ```
 
 Use show commands for pre-checks, post-checks, and read-only jobs.
@@ -142,10 +128,10 @@ device.cli.send_config_set([
     "interface GigabitEthernet0/1",
     "description Uplink to Core Switch",
 ])
-device.cli.send_command("write memory")
+device.cli("write memory")
 ```
 
-`send_config_set` automatically handles entering and exiting configuration mode. Save persistent changes with an explicit operational command such as `device.cli.send_command("write memory")` after `send_config_set` completes. For Cisco IOS and IOS-XE, the examples usually verify the running configuration after changes.
+`send_config_set` automatically handles entering and exiting configuration mode. Save persistent changes with `device.cli("write memory")` after `send_config_set` completes.
 
 ## Logging and Output
 
@@ -154,13 +140,7 @@ device.cli.send_command("write memory")
 
 ## Return Values
 
-Jobs may return values that Netpicker can use in workflows. For example, `ensure_acl_bound` returns dictionaries such as:
-
-```python
-{"status": "exists", "interface": interface, "acl": acl_name, "direction": direction}
-```
-
-Many configuration jobs in this repository rely on printed status messages and exceptions instead of returning a value.
+Jobs may return values that Netpicker can use in workflows. If no return value is needed, rely on `print()` messages and exceptions to signal success or failure.
 
 ## Tests
 
