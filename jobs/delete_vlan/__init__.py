@@ -43,9 +43,9 @@ def delete_vlan(device, vlan_id):
     # EXECUTION
     try:
         device.cli.send_config_set([
-            f"no vlan {vlan_id}",
-            "exit"
+            f"no vlan {vlan_id}"
         ])
+        device.cli.send_command("write memory")
         print(f"[EXEC] Delete configuration sent to {device.name}.")
 
     except Exception as e:

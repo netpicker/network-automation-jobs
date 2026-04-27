@@ -4,100 +4,169 @@ This repository contains example automation jobs designed for use within [Netpic
 
 ## Overview
 
-Netpicker automation jobs are Python functions that leverage the power of [Netmiko](https://github.com/ktbyers/netmiko) to interact with network devices. You can define jobs to perform configuration changes, execute show commands, gather data, and integrate with Netpicker's workflow engine.
+Netpicker automation jobs are Python functions decorated with `@job` from `comfy.automate`. The examples in this repository show how to use Netpicker's device object and Netmiko-backed CLI access to run operational commands, make configuration changes, validate inputs, and verify the final device state.
+
+Most jobs in this repository target Cisco IOS and IOS-XE devices with:
+
+```python
+@job(platform=['cisco_ios', 'cisco_xe'])
+```
+
+The `ensure_acl_bound` job uses a wildcard platform selector:
+
+```python
+@job(platform='cisco*')
+```
+
+The `password_rotation` job supports multiple platforms and branches its command logic by `device.platform`.
+
+## Example Jobs
+
+| Job | Platforms | Purpose |
+| --- | --- | --- |
+| `create_vlan` | `cisco_ios`, `cisco_xe` | Create a VLAN after checking that it does not already exist. |
+| `delete_vlan` | `cisco_ios`, `cisco_xe` | Delete a VLAN after checking that it exists. |
+| `list_vlans` | `cisco_ios`, `cisco_xe` | Display `show vlan brief` output. |
+| `assign_vlan_to_access_port` | `cisco_ios`, `cisco_xe` | Assign an existing VLAN to an access interface. |
+| `add_vlan_to_trunk` | `cisco_ios`, `cisco_xe` | Add a VLAN to a trunk interface. |
+| `shutdown_interface` | `cisco_ios`, `cisco_xe` | Shut down an interface after confirming it is up. |
+| `no_shutdown_interface` | `cisco_ios`, `cisco_xe` | Enable an administratively down interface. |
+| `set_interface_description` | `cisco_ios`, `cisco_xe` | Set an interface description. |
+| `set_interface_speed_duplex` | `cisco_ios`, `cisco_xe` | Configure interface speed and duplex. |
+| `add_static_route` | `cisco_ios`, `cisco_xe` | Add a static route after checking for an existing route. |
+| `ensure_acl_bound` | `cisco*` | Ensure an ACL is applied to an interface in the requested direction. |
+| `rotate_password` | `cisco_ios`, `cisco_xe`, `cisco_nxos`, `arista_eos`, `cisco_wlc` | Rotate a local user password and notify a webhook. |
 
 ## Creating an Automation Job
 
-To define an automation job, use the `@job` decorator from the `comfy.automate` library on a Python function.
+Each job is a regular Python function. The first argument is always the Netpicker `device` object. Additional function arguments become parameters that can be supplied when the job is run.
 
-### Example Job: Setting NTP Server on Juniper Devices
+Here is a minimal job that sets an interface description:
 
 ```python
 from comfy.automate import job
-import logging
 
-# Target Juniper platforms (Junos) using Netmiko platform type wildcard
-@job(platform='juniper_junos*')
-def set_ntp_server_juniper_junos(device, ntp_server: str):
-    """
-    Configures the NTP server on a Juniper device and commits the change.
 
-    Args:
-        device: The Netpicker device object (contains IP, platform, etc.).
-        ntp_server (str): The IP address or hostname of the NTP server.
-    """
-    logging.info(f"Starting NTP configuration job on device {device.ipaddress}")
-
-    # Commands to send in configuration mode
-    config_commands = [
-      f"set system ntp server {ntp_server}",
-      "commit" # Necessary for Junos to apply changes
-    ]
-
-    try:
-        # device.cli provides access to Netmiko methods
-        # send_config_set enters config mode, sends commands, and exits
-        result = device.cli.send_config_set(config_commands)
-        logging.info(f"Configuration successful: {result}")
-        # Return the result for use in Netpicker workflows
-        return result
-    except Exception as e:
-        logging.error(f"Error configuring NTP on {device.ipaddress}: {e}")
-        # Optionally re-raise or return an error indicator
-        raise
-
+@job(platform=['cisco_ios', 'cisco_xe'])
+def set_interface_description(device, interface_name, description):
+    device.cli.send_config_set([f"interface {interface_name}", f"description {description}"])
+    device.cli.send_command("write memory")
+    print(f"Description set on {interface_name}")
 ```
 
-### The `@job` Decorator
+For jobs that change production network state, add input validation, pre-checks, and post-checks:
 
-- **`platform`**: Specifies the target device platform(s).
-  - Accepts a string or a list of strings.
-  - These strings correspond to [Netmiko platform types](https://github.com/ktbyers/netmiko/blob/develop/PLATFORMS.md). Examples: `'cisco_ios'`, `'arista_eos'`, `'juniper_junos'`.
-  - You can use an asterisk (`*`) as a wildcard (e.g., `'cisco*'` matches `cisco_ios`, `cisco_xe`, `cisco_xr`, etc.).
+```python
+from comfy.automate import job
 
-### Function Arguments
 
-- **`device`**: The first argument is always the Netpicker `device` object. It contains attributes like `name`, `ipaddress`, `platform`, `tags`, etc.
-- **Custom Arguments**: Any subsequent arguments (like `ntp_server: str` in the example) are defined by you. These become parameters that must be provided when running the job via Netpicker.
+@job(platform=['cisco_ios', 'cisco_xe'])
+def create_vlan(device, vlan_id, vlan_name):
+    vlan_id = str(vlan_id).strip()
+    vlan_name = str(vlan_name).strip()
 
-## Interacting with Devices using Netmiko
+    if not vlan_id:
+        raise ValueError("vlan_id cannot be empty.")
 
-Netpicker provides access to Netmiko's capabilities through the `device.cli` object.
+    if not vlan_id.isdigit() or not (1 <= int(vlan_id) <= 4094):
+        raise ValueError(f"Invalid vlan_id: {vlan_id}")
 
-### Configuration Changes (`send_config_set`)
+    existing = device.cli(f"show vlan id {vlan_id}")
 
-- Use `device.cli.send_config_set([...])` to send configuration commands.
-- **How it works:** Netmiko typically automatically enters configuration mode on the device, sends the list of commands you provide, and then exits configuration mode.
-- **Important:** For many platforms (like Cisco IOS/NX-OS, Arista EOS), changes made in configuration mode are not saved automatically. You usually need to include a command like `'write memory'` or `'copy running-config startup-config'` in your command list if you want the changes to persist after a reboot.
-- For platforms like Juniper Junos, a `'commit'` command is required within the configuration session to apply the changes, as shown in the example.
-- **Reference:** [Netmiko `send_config_set` documentation](https://ktbyers.github.io/netmiko/docs/netmiko/index.html#netmiko.base_connection.BaseConnection.send_config_set)
+    if "active" in existing.lower() or "suspended" in existing.lower():
+        print(f"[SKIP] VLAN {vlan_id} already exists on {device.name}. No changes made.")
+        return
 
-### Show Commands (`send_command`)
+    device.cli.send_config_set([
+        f"vlan {vlan_id}",
+        f"name {vlan_name}",
+    ])
+    device.cli.send_command("write memory")
 
-- Use `device.cli.send_command("...")` to execute operational or show commands (e.g., `'show version'`, `'show interfaces'`).
-- This method does _not_ enter configuration mode.
-- The output of the command is returned as a string.
-- **Reference:** [Netmiko `send_command` documentation](https://ktbyers.github.io/netmiko/docs/netmiko/index.html#netmiko.base_connection.BaseConnection.send_command)
+    verification = device.cli(f"show vlan id {vlan_id}")
 
-### Netmiko Tips & Tricks
+    if "active" not in verification.lower() and "suspended" not in verification.lower():
+        raise RuntimeError(f"VLAN {vlan_id} creation could not be verified on {device.name}.")
 
-- **Error Handling:** Network operations can fail. Wrap `device.cli` calls in `try...except` blocks to catch potential Netmiko exceptions (e.g., timeouts, authentication errors) and log them appropriately.
-- **Timeouts:** Be mindful of command execution time. Netmiko has default timeouts, but complex commands might take longer. While direct timeout adjustment might not be exposed via `device.cli`, structuring jobs efficiently helps. For long-running commands, consider alternative approaches if possible.
-- **Platform Differences:** Always consult the Netmiko documentation and test thoroughly, as command syntax and behavior (especially regarding configuration saving) vary significantly between vendors and platforms.
-- **Idempotency:** Design your configuration jobs to be idempotent where possible. This means running the job multiple times should result in the same final state without causing errors or unintended changes.
+    print(f"[SUCCESS] VLAN {vlan_id} ('{vlan_name}') created successfully on {device.name}.")
+```
 
-## Logging
+## Common Job Pattern
 
-- Use Python's standard `logging` module (`import logging`).
-- Call `logging.info()`, `logging.warning()`, `logging.error()`, `logging.debug()` as needed.
-- Logs are captured and visible within the Netpicker job execution details.
+The configuration examples follow a consistent structure:
+
+1. Normalize and validate inputs.
+2. Run a pre-check with a show command.
+3. Skip safely if the desired state already exists or prerequisites are missing.
+4. Apply configuration with `device.cli.send_config_set([...])`.
+5. Save the configuration with `device.cli.send_command("write memory")`.
+6. Run a post-check to verify the intended state.
+7. Raise an exception when validation or verification fails so Netpicker records the job as failed.
+
+This pattern keeps jobs predictable and makes repeated runs safer.
+
+## The `@job` Decorator
+
+The `platform` argument specifies which device platforms can run the job.
+
+- Use a list for exact platform matches, such as `['cisco_ios', 'cisco_xe']`.
+- Use a string for a single platform or wildcard selector, such as `'cisco*'`.
+- Platform names should match Netmiko platform types used by Netpicker.
+
+## Function Arguments
+
+- `device`: The Netpicker device object. The examples use attributes such as `device.name`, `device.ipaddress`, and `device.platform`.
+- Custom arguments: Any parameters after `device`, such as `vlan_id`, `interface_name`, `description`, or `next_hop`, are job inputs.
+
+## Interacting With Devices
+
+Netpicker exposes CLI access through `device.cli`.
+
+### Show Commands
+
+The examples use both forms below for operational commands:
+
+```python
+output = device.cli("show vlan brief")
+output = device.cli.send_command("show running-config interface GigabitEthernet0/1")
+```
+
+Use show commands for pre-checks, post-checks, and read-only jobs.
+
+### Configuration Changes
+
+Use `device.cli.send_config_set([...])` to send configuration commands:
+
+```python
+device.cli.send_config_set([
+    "interface GigabitEthernet0/1",
+    "description Uplink to Core Switch",
+])
+device.cli.send_command("write memory")
+```
+
+`send_config_set` automatically handles entering and exiting configuration mode. Save persistent changes with an explicit operational command such as `device.cli.send_command("write memory")` after `send_config_set` completes. For Cisco IOS and IOS-XE, the examples usually verify the running configuration after changes.
+
+## Logging and Output
+
+- Use `print()` for execution messages. Netpicker captures this output in job execution details.
+- Use clear status prefixes such as `[PRE-CHECK]`, `[EXEC]`, `[SUCCESS]`, `[SKIP]`, `[FAILED]`, and `[ERROR]` to make job output easy to scan.
 
 ## Return Values
 
-- You can `return` a value (like the `result` from `send_config_set` or `send_command`) from your job function.
-- Returned values can be captured by Netpicker and used in subsequent steps within a workflow, enabling conditional logic or data passing.
+Jobs may return values that Netpicker can use in workflows. For example, `ensure_acl_bound` returns dictionaries such as:
+
+```python
+{"status": "exists", "interface": interface, "acl": acl_name, "direction": direction}
+```
+
+Many configuration jobs in this repository rely on printed status messages and exceptions instead of returning a value.
+
+## Tests
+
+The `tests/` directory contains YAML-based job test data. For example, `tests/ensure_acl_bound.yaml` defines mocked CLI responses and expected outcomes for `ensure_acl_bound`.
 
 ---
 
-_For more details on Netpicker, visit [netpicker.io](https://netpicker.io/)._
-_For in-depth Netmiko information, refer to the [official Netmiko documentation](https://ktbyers.github.io/netmiko/docs/netmiko/)._
+For more details on Netpicker, visit [netpicker.io](https://netpicker.io/).
+For in-depth Netmiko information, refer to the [official Netmiko documentation](https://ktbyers.github.io/netmiko/docs/netmiko/).

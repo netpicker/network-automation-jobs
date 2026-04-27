@@ -50,9 +50,9 @@ def create_vlan(device, vlan_id, vlan_name):
     try:
         device.cli.send_config_set([
             f"vlan {vlan_id}",
-            f"name {vlan_name}",
-            "exit"
+            f"name {vlan_name}"
         ])
+        device.cli.send_command("write memory")
         print(f"[EXEC] Configuration sent to {device.name}.")
 
     except Exception as e:

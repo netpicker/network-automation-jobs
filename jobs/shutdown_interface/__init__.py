@@ -40,9 +40,9 @@ def shutdown_interface(device, interface_name):
     try:
         device.cli.send_config_set([
             f"interface {interface_name}",
-            "shutdown",
-            "exit"
+            "shutdown"
         ])
+        device.cli.send_command("write memory")
         print(f"[EXEC] Shutdown command sent to {device.name} for interface {interface_name}.")
 
     except Exception as e:

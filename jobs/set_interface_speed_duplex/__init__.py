@@ -53,9 +53,9 @@ def set_interface_speed_duplex(device, interface, speed, duplex):
         device.cli.send_config_set([
             f"interface {interface}",
             f"speed {speed}",
-            f"duplex {duplex}",
-            "exit"
+            f"duplex {duplex}"
         ])
+        device.cli.send_command("write memory")
         print(f"[EXEC] Configuration sent to {device.name} for {interface}.")
 
     except Exception as e:

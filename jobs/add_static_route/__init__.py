@@ -51,9 +51,9 @@ def add_static_route(device, destination_network, subnet_mask, next_hop):
     # EXECUTION
     try:
         device.cli.send_config_set([
-            f"ip route {destination_network} {subnet_mask} {next_hop}",
-            "exit"
+            f"ip route {destination_network} {subnet_mask} {next_hop}"
         ])
+        device.cli.send_command("write memory")
         print(f"[EXEC] Configuration sent to {device.name}.")
 
     except Exception as e:

@@ -46,9 +46,9 @@ def set_interface_description(device, interface_name, description):
     try:
         device.cli.send_config_set([
             f"interface {interface_name}",
-            f"description {description}",
-            "exit"
+            f"description {description}"
         ])
+        device.cli.send_command("write memory")
         print(f"[EXEC] Configuration sent to {device.name}.")
 
     except Exception as e:

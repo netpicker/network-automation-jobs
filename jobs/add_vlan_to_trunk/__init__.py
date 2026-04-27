@@ -46,9 +46,9 @@ def add_vlan_to_trunk(device, interface, vlan_id):
     try:
         device.cli.send_config_set([
             f"interface {interface}",
-            f"switchport trunk allowed vlan add {vlan_id}",
-            "exit"
+            f"switchport trunk allowed vlan add {vlan_id}"
         ])
+        device.cli.send_command("write memory")
         print(f"[EXEC] Configuration sent to {device.name}.")
 
     except Exception as e:

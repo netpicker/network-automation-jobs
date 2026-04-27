@@ -19,20 +19,20 @@ def rotate_password(device, local_user: str, local_passwd: str):
                 f"username {local_user} password {local_passwd} role network-admin",
                 f"username {local_user} role priv-15",
             ])
-            device.cli("copy running-config startup-config")
+            device.cli.send_command("copy running-config startup-config")
 
         elif device.platform in ["cisco_xe", "cisco_ios"]:
             device.cli.send_config_set([
                 f"username {local_user} privilege 15 secret {local_passwd}",
                 "no enable secret"
             ])
-            device.cli("write mem")
+            device.cli.send_command("write memory")
 
         elif device.platform == "arista_eos":
             device.cli.send_config_set([
                 f"username {local_user} privilege 15 role network-admin secret {local_passwd}"
             ])
-            device.cli("copy running-config startup-config")
+            device.cli.send_command("copy running-config startup-config")
 
         elif device.platform == "cisco_wlc":
             device.cli(f"config mgmtuser password {local_user} {local_passwd}")

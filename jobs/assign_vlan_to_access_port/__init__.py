@@ -55,9 +55,9 @@ def assign_vlan_to_access_port(device, interface, vlan_id):
     try:
         device.cli.send_config_set([
             f"interface {interface}",
-            f"switchport access vlan {vlan_id}",
-            "exit"
+            f"switchport access vlan {vlan_id}"
         ])
+        device.cli.send_command("write memory")
         print(f"[EXEC] Configuration sent to {device.name}.")
 
     except Exception as e:
