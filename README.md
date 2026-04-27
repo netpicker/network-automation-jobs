@@ -2,6 +2,8 @@
 
 This repository contains example automation jobs designed for use within [Netpicker](https://netpicker.io/), our all-in-one network automation platform.
 
+> **Note:** Netpicker supports multiple ways to define automation jobs. From the Netpicker GUI you can create a **Simple Job** by specifying configuration commands or show commands to execute — no Python required. The Python-based approach in this repository is for more advanced use cases that need input validation, conditional logic, pre/post checks, or integration with external systems.
+
 ## Overview
 
 Netpicker automation jobs are Python functions decorated with `@job` from `comfy.automate`. The examples in this repository show how to use Netpicker's device object and Netmiko-backed CLI access to run operational commands, make configuration changes, validate inputs, and verify the final device state.
@@ -91,6 +93,20 @@ def create_vlan(device, vlan_id, vlan_name):
     print(f"[SUCCESS] VLAN {vlan_id} ('{vlan_name}') created successfully on {device.name}.")
 ```
 
+## Common Job Pattern
+
+The configuration examples follow a consistent structure:
+
+1. Normalize and validate inputs.
+2. Run a pre-check with a show command.
+3. Skip safely if the desired state already exists or prerequisites are missing.
+4. Apply configuration with `device.cli.send_config_set([...])`.
+5. Save the configuration with `device.cli("write memory")`.
+6. Run a post-check to verify the intended state.
+7. Raise an exception when validation or verification fails so Netpicker records the job as failed.
+
+This pattern keeps jobs predictable and makes repeated runs safer.
+
 ## The `@job` Decorator
 
 The `platform` argument specifies which device platforms can run the job.
@@ -149,4 +165,5 @@ The `tests/` directory contains YAML-based job test data. For example, `tests/en
 ---
 
 For more details on Netpicker, visit [netpicker.io](https://netpicker.io/).
+For knowledge base articles on network automation jobs, see the [Netpicker Network Automation KB](https://netpicker.io/category/knowledge-base/network-automation/).
 For in-depth Netmiko information, refer to the [official Netmiko documentation](https://ktbyers.github.io/netmiko/docs/netmiko/).

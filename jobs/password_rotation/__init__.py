@@ -1,16 +1,16 @@
 import requests
-from comfy.automate import job
+from comfy import job, Secret
 
 
 @job(platform=['cisco_ios', 'cisco_xe', 'cisco_nxos', 'arista_eos', "cisco_wlc"])
-def rotate_password(device, local_user: str, local_passwd: str):
+def rotate_password(device, local_user: str, local_passwd: Secret):
     """Rotate a local password and notify a webhook."""
     webhook_url = ""
 
     try:
         if not local_user or not str(local_user).strip():
             raise RuntimeError("Missing required input: local_user")
-        if not local_passwd or not str(local_passwd).strip():
+        if not local_passwd:
             raise RuntimeError("Missing required input: local_passwd")
 
         if device.platform == "cisco_nxos":
