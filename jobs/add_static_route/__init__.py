@@ -1,4 +1,5 @@
 from comfy.automate import job
+from ipaddress import IPv4Network
 
 
 @job(platform=['cisco_ios', 'cisco_xe'])
@@ -8,12 +9,13 @@ def add_static_route(device, destination_network, subnet_mask, next_hop):
     subnet_mask = str(subnet_mask).strip()
     next_hop = str(next_hop).strip()
 
-    if not destination_network:
-        raise ValueError("destination_network cannot be empty.")
-    if not subnet_mask:
-        raise ValueError("subnet_mask cannot be empty.")
-    if not next_hop:
-        raise ValueError("next_hop cannot be empty.")
+    try:
+        IPv4Network((destination_network, subnet_mask), strict=True)
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid destination network/subnet mask combination: "
+            f"{destination_network} {subnet_mask}"
+        ) from exc
 
     existing = device.cli(f"show ip route {destination_network}")
     if destination_network in existing and "directly connected" not in existing.lower():
