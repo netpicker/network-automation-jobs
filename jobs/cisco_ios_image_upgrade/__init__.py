@@ -68,6 +68,8 @@ def cisco_ios_image_upgrade(
     # write_file() performs the transfer and the configured checksum
     # verification. The boot configuration is changed only when it
     # returns successfully.
+    # Set JOB_EXEC_LOG_LEVEL: AUDIT in the docker compose configuration
+    # to view the write_file() actions in job logs.
     # ------------------------------------------------------------
     transfer_result = device.write_file(
         file_tag,
