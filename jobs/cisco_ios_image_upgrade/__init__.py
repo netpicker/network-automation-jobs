@@ -52,8 +52,6 @@ def cisco_ios_image_upgrade(
 
     print(f"Selected tag: {file_tag}")
     print(f"Resolved filename: {file_name}")
-    print(f"Expected MD5: {uploaded_file.md5}")
-    print(f"Expected SHA256: {uploaded_file.sha256}")
 
     # ------------------------------------------------------------
     # 1. Check the file before transfer
